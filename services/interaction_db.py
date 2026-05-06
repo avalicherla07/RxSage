@@ -12,6 +12,11 @@ from __future__ import annotations
 import logging
 from models.request import MedicationInput
 from models.response import RxNavInteraction
+from db.drug_knowledge import (
+    get_drug_classes as _db_get_drug_classes,
+    get_class_interaction_rules as _db_get_class_rules,
+    get_condition_interaction_rules as _db_get_condition_rules,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -611,41 +616,46 @@ _RISK_AMPLIFIERS: list[tuple[set[str], str, str]] = [
 # LOOKUP FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
 
-def _get_drug_classes(name: str) -> set[str]:
-    """Return the pharmacological classes for a drug name.
-
-    Tries exact match first, then checks if the name contains a known drug
-    (handles compound names like 'Lidocaine with epinephrine').
+async def _get_drug_classes(name: str) -> set[str]:
+    """Return pharmacological classes for a drug name.
+    Tries Supabase first, falls back to local hardcoded dict on empty result.
     """
-    lower = name.lower().strip()
-
-    # Exact match
-    classes = _DRUG_CLASSES.get(lower)
+    classes = await _db_get_drug_classes(name)
     if classes:
-        return set(classes)
+        return classes
 
-    # Partial match — check if any known drug name is contained in the input
-    # This handles "Lidocaine with epinephrine", "Codeine phosphate", etc.
+    # Fallback to hardcoded dict
+    lower = name.lower().strip()
+    local = _DRUG_CLASSES.get(lower)
+    if local:
+        return set(local)
+
     found: set[str] = set()
     for known_name, known_classes in _DRUG_CLASSES.items():
         if known_name in lower or lower in known_name:
             found.update(known_classes)
-
     return found
 
 
-def _check_class_interaction(
+async def _check_class_interaction(
     classes_a: set[str], classes_b: set[str]
 ) -> list[tuple[str, str]]:
     """Check if two sets of drug classes have known interactions.
+    Tries Supabase rules first, falls back to local hardcoded rules on empty result.
     Returns list of (severity, description) tuples.
     """
+    rules = await _db_get_class_rules()
+    if not rules:
+        rules = [
+            (set(a), set(b), sev, desc)
+            for a, b, sev, desc in _CLASS_INTERACTIONS
+        ]
+
     results = []
     seen_descs: set[str] = set()
-    for rule_a, rule_b, severity, description in _CLASS_INTERACTIONS:
+    for rule_a, rule_b, severity, description in rules:
         if (rule_a & classes_a and rule_b & classes_b) or \
            (rule_a & classes_b and rule_b & classes_a):
-            # Deduplicate by description prefix
             key = description[:60]
             if key not in seen_descs:
                 seen_descs.add(key)
@@ -653,16 +663,12 @@ def _check_class_interaction(
     return results
 
 
-def get_interactions(
+async def get_interactions(
     current_medications: list[MedicationInput],
     candidate: MedicationInput,
 ) -> list[RxNavInteraction]:
-    """Look up drug-drug interactions from the local curated database.
-
-    Uses pharmacological class mapping to identify interactions.
-    Returns immediately — no network calls.
-    """
-    candidate_classes = _get_drug_classes(candidate.name)
+    """Look up drug-drug interactions. Queries Supabase with local dict fallback."""
+    candidate_classes = await _get_drug_classes(candidate.name)
     if not candidate_classes:
         logger.info("No class mapping for candidate %r", candidate.name)
 
@@ -670,11 +676,10 @@ def get_interactions(
     seen: set[str] = set()
 
     for med in current_medications:
-        med_classes = _get_drug_classes(med.name)
+        med_classes = await _get_drug_classes(med.name)
         if not med_classes:
             continue
-
-        matches = _check_class_interaction(med_classes, candidate_classes)
+        matches = await _check_class_interaction(med_classes, candidate_classes)
         for severity, description in matches:
             key = f"{med.name.lower()}|{candidate.name.lower()}|{description[:50]}"
             if key in seen:
@@ -688,14 +693,13 @@ def get_interactions(
                 source_url=_SOURCE_URL,
             ))
 
-    # Also check current-med vs current-med interactions
     for i, med_a in enumerate(current_medications):
         for med_b in current_medications[i + 1:]:
-            classes_a = _get_drug_classes(med_a.name)
-            classes_b = _get_drug_classes(med_b.name)
+            classes_a = await _get_drug_classes(med_a.name)
+            classes_b = await _get_drug_classes(med_b.name)
             if not classes_a or not classes_b:
                 continue
-            matches = _check_class_interaction(classes_a, classes_b)
+            matches = await _check_class_interaction(classes_a, classes_b)
             for severity, description in matches:
                 key = f"{med_a.name.lower()}|{med_b.name.lower()}|{description[:50]}"
                 if key in seen:
@@ -713,29 +717,31 @@ def get_interactions(
     return interactions
 
 
-def get_condition_interactions(
+async def get_condition_interactions(
     medications: list[MedicationInput],
     conditions: list[str],
 ) -> list[RxNavInteraction]:
-    """Look up drug-class + patient-condition interactions.
-
-    Checks each medication's drug classes against the patient's conditions.
-    Returns interactions where a drug class is dangerous given a specific condition.
-    """
+    """Look up drug-condition interactions. Queries Supabase with local dict fallback."""
     if not conditions:
         return []
+
+    rules = await _db_get_condition_rules()
+    if not rules:
+        rules = [
+            (set(a), set(b), sev, desc)
+            for a, b, sev, desc in _CONDITION_INTERACTIONS
+        ]
 
     condition_lower = {c.lower().strip() for c in conditions}
     interactions: list[RxNavInteraction] = []
     seen: set[str] = set()
 
     for med in medications:
-        med_classes = _get_drug_classes(med.name)
+        med_classes = await _get_drug_classes(med.name)
         if not med_classes:
             continue
 
-        for rule_classes, rule_conditions, severity, description in _CONDITION_INTERACTIONS:
-            # Check if drug has a matching class AND patient has a matching condition
+        for rule_classes, rule_conditions, severity, description in rules:
             if not (rule_classes & med_classes):
                 continue
             if not any(

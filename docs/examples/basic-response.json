@@ -1,0 +1,119 @@
+{
+  "request_id": "a1b2c3d4e5f6...",
+  "headline": "Clarithromycin may significantly raise warfarin levels — consider reviewing INR before extraction.",
+  "proceed": "do_not_proceed",
+  "risk_level": "high",
+  "flags": [
+    {"label": "Antibiotic interaction with warfarin", "severity": "high"},
+    {"label": "Bleeding risk — anticoagulated patient", "severity": "high"},
+    {"label": "Penicillin allergy — alternatives needed", "severity": "info"}
+  ],
+  "summary": "Clarithromycin inhibits CYP3A4, which may increase warfarin levels and elevate INR. Combined with the planned extraction, bleeding risk is significantly elevated. Consider clindamycin as an alternative antibiotic given the penicillin allergy.",
+  "anesthetic_safety": {
+    "recommended_agent": "Lidocaine 2% with epinephrine 1:100,000",
+    "epinephrine_status": "limit",
+    "epinephrine_guidance": "Consider limiting to 2 cartridges of 1:100,000 epinephrine given carvedilol (non-selective beta-blocker).",
+    "plain_alternative": "Mepivacaine 3% plain",
+    "interaction_notes": [
+      "Carvedilol (non-selective beta-blocker) — epinephrine may cause hypertensive episodes."
+    ]
+  },
+  "antibiotic_safety": {
+    "prophylaxis_indicated": false,
+    "prophylaxis_reason": null,
+    "prophylaxis_agent": null,
+    "candidate_antibiotic_status": "avoid — CYP3A4 inhibition raises warfarin levels significantly",
+    "safe_alternatives": [
+      {"name": "Clindamycin", "dosage": "300mg TID x 5-7 days", "reason": "No CYP interaction with warfarin, safe with penicillin allergy."},
+      {"name": "Azithromycin", "dosage": "500mg day 1, 250mg days 2-5", "reason": "Lower CYP interaction potential than clarithromycin."}
+    ],
+    "interaction_notes": [
+      "Clarithromycin inhibits CYP3A4 — may increase warfarin levels and INR."
+    ]
+  },
+  "analgesic_safety": {
+    "first_line_recommendation": "Acetaminophen 500-1000mg every 6 hours (max 2g/day in anticoagulated patients).",
+    "ibuprofen_status": "avoid",
+    "acetaminophen_status": "caution",
+    "status_notes": [
+      "Ibuprofen — avoid with warfarin due to increased bleeding risk.",
+      "Acetaminophen — safe but limit to 2g/day as higher doses may affect INR."
+    ],
+    "safe_alternatives": [],
+    "interaction_notes": [
+      "NSAIDs potentiate warfarin anticoagulant effect — avoid all NSAIDs."
+    ]
+  },
+  "sedation_safety": {
+    "nitrous_oxide_note": "Nitrous oxide/oxygen — no drug interactions, reversible, consider as first-line anxiety management.",
+    "oral_sedation_status": "caution",
+    "oral_sedation_notes": [
+      "Patient age 68 — prefer lowest effective dose, note fall risk post-sedation.",
+      "Heart failure — monitor respiratory status if sedation used."
+    ],
+    "recommended_agent": "Triazolam 0.125mg",
+    "alternatives": [
+      "Hydroxyzine (Vistaril) 25mg — non-controlled alternative"
+    ]
+  },
+  "oral_manifestations": {
+    "findings": [
+      {
+        "medication": "Carvedilol",
+        "effect": "Xerostomia (dry mouth)",
+        "dental_relevance": "May increase caries risk and affect topical anesthetic absorption.",
+        "severity": "low"
+      }
+    ],
+    "no_findings_note": null
+  },
+  "procedure_context": {
+    "procedure_type": "extraction",
+    "procedure_specific_notes": [
+      "Anticoagulated patient — elevated bleeding risk during extraction.",
+      "Consider local hemostatic measures (gelatin sponge, tranexamic acid rinse)."
+    ],
+    "pre_procedure_checks": [
+      "Consider reviewing INR — values above 3.5 may increase hemorrhage risk."
+    ],
+    "procedure_modifications": [
+      "Consider local hemostatic measures if extraction proceeds.",
+      "Limit epinephrine to 2 cartridges given carvedilol."
+    ]
+  },
+  "clinical_explanation": "Clarithromycin is a potent CYP3A4 inhibitor. Warfarin is partially metabolized by CYP3A4. Concurrent use may significantly increase warfarin plasma levels, leading to elevated INR and increased bleeding risk. This is compounded by the planned extraction procedure and the patient's age (68) which reduces hepatic clearance. Carvedilol, a non-selective beta-blocker, interacts with epinephrine in dental anesthetics — beta-2 vasodilation is blocked, leaving alpha-1 vasoconstriction unopposed, which may cause hypertensive episodes.",
+  "patient_risk_factors": [
+    {"factor": "Age 68", "impact": "Reduced hepatic metabolism increases drug interaction severity."},
+    {"factor": "Atrial fibrillation on warfarin", "impact": "Elevated baseline bleeding risk."},
+    {"factor": "Heart failure", "impact": "Reduced cardiac reserve — limit epinephrine."},
+    {"factor": "Penicillin allergy", "impact": "Limits antibiotic options — amoxicillin contraindicated."}
+  ],
+  "dental_implications": "The combination of warfarin anticoagulation, CYP3A4 inhibition from clarithromycin, and the planned extraction creates a high-risk scenario. Consider switching to clindamycin, reviewing INR before the procedure, and having hemostatic measures ready.",
+  "physician_referral": "Consider consulting the patient's cardiologist regarding INR management around the extraction.",
+  "monitoring_recommendations": [
+    "Review INR within 48 hours before extraction.",
+    "Monitor for signs of excessive bleeding for 24 hours post-procedure.",
+    "Advise patient to report any unusual bleeding or bruising."
+  ],
+  "reasoning_layers_used": ["local_db", "openfda", "dailymed", "pubmed"],
+  "sources": [
+    {"name": "local_db", "url": null, "detail": "Warfarin + clarithromycin CYP3A4 interaction."},
+    {"name": "openfda", "url": "https://open.fda.gov/", "detail": "Warfarin drug label warnings."},
+    {"name": "dailymed", "url": "https://dailymed.nlm.nih.gov/", "detail": "Clarithromycin interaction section."}
+  ],
+  "evidence_quality": {
+    "total_sources_consulted": 4,
+    "highest_trust_source": "FDA official drug label",
+    "sources_used": ["local_db", "openfda", "dailymed", "pubmed"],
+    "evidence_conflicts": [],
+    "overall_evidence_quality": "strong",
+    "evidence_quality_reason": "Based on FDA drug labels and curated interaction database."
+  },
+  "confidence": "high",
+  "confidence_reason": "Multiple high-trust sources confirm the interaction.",
+  "cache_hit": false,
+  "normalised_drug_names": [],
+  "drugs_not_found": [],
+  "fallback": false,
+  "fallback_reason": null
+}
