@@ -126,7 +126,7 @@ async def _gather_external_data(request: AnalysisRequest) -> ExternalData:
             return []
 
     # 1. Local DB — instant, synchronous, always runs
-    local_interactions = interaction_db.get_interactions(
+    local_interactions = await interaction_db.get_interactions(
         request.current_medications, request.candidate_medication
     )
 
@@ -247,7 +247,7 @@ async def analyze(
 
     # 3b. Add condition-aware interactions (drug-class + patient-condition)
     all_meds = list(request.current_medications) + [request.candidate_medication]
-    condition_interactions = interaction_db.get_condition_interactions(
+    condition_interactions = await interaction_db.get_condition_interactions(
         all_meds, request.patient.conditions
     )
     if condition_interactions:
