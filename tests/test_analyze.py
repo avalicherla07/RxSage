@@ -8,10 +8,9 @@ from pydantic import ValidationError
 
 from models.request import AnalysisRequest, MedicationInput, PatientInput, SexEnum
 from models.response import (
+    AlternativeMedication,
     AnalysisResponse,
-    ConfidenceLevel,
-    RiskLevel,
-    SourceRef,
+    SourceAttribution,
 )
 
 # ---------------------------------------------------------------------------
@@ -44,23 +43,31 @@ analysis_request_strategy = st.builds(
     candidate_medication=medication_strategy,
 )
 
-source_ref_strategy = st.builds(
-    SourceRef,
+source_attribution_strategy = st.builds(
+    SourceAttribution,
     name=nonempty_text,
     url=st.one_of(st.none(), nonempty_text),
+)
+
+alternative_medication_strategy = st.builds(
+    AlternativeMedication,
+    name=nonempty_text,
+    dosage=nonempty_text,
+    reason=nonempty_text,
 )
 
 analysis_response_strategy = st.builds(
     AnalysisResponse,
     request_id=nonempty_text,
-    risk_level=st.sampled_from(list(RiskLevel)),
-    summary=nonempty_text,
-    clinical_explanation=nonempty_text,
+    headline=st.text(min_size=10, max_size=100).filter(str.strip),
+    proceed=st.sampled_from(["safe", "caution", "modify", "do_not_proceed"]),
+    risk_level=st.sampled_from(["high", "medium", "low"]),
+    summary=st.text(min_size=20, max_size=200).filter(str.strip),
+    clinical_explanation=st.text(min_size=20, max_size=200).filter(str.strip),
     dental_implications=nonempty_text,
-    recommendations=st.lists(nonempty_text, max_size=5),
-    alternative_medications=st.lists(nonempty_text, max_size=5),
-    confidence=st.sampled_from(list(ConfidenceLevel)),
-    sources=st.lists(source_ref_strategy, max_size=5),
+    alternative_medications=st.lists(alternative_medication_strategy, max_size=5),
+    confidence=st.sampled_from(["high", "medium", "low"]),
+    sources=st.lists(source_attribution_strategy, max_size=5),
     fallback=st.booleans(),
     fallback_reason=st.one_of(st.none(), nonempty_text),
 )
@@ -161,16 +168,16 @@ def test_optional_fields_absent_succeeds():
 # ---------------------------------------------------------------------------
 
 # Feature: clarvyn-python-api, Property 15: AnalysisResponse schema completeness
-@given(st.builds(AnalysisResponse))
+@given(analysis_response_strategy)
 @h_settings(max_examples=100)
 def test_response_schema_completeness(response: AnalysisResponse):
     """
     **Validates: Requirements 9.2, 11.4**
-    Every generated AnalysisResponse must have all 11 required fields.
+    Every generated AnalysisResponse must have all required fields.
     """
     required_fields = [
-        "request_id", "risk_level", "summary", "clinical_explanation",
-        "dental_implications", "recommendations", "alternative_medications",
+        "request_id", "headline", "proceed", "risk_level", "summary",
+        "clinical_explanation", "dental_implications", "alternative_medications",
         "confidence", "sources", "fallback", "fallback_reason",
     ]
     for field in required_fields:
@@ -192,6 +199,8 @@ from models.response import (
     APIKeyRecord,
     FDAWarning,
     RxNavInteraction,
+    SourceAttribution,
+    AlternativeMedication,
 )
 
 
@@ -228,14 +237,15 @@ async def test_e2e_analyze_returns_valid_response():
 
     mock_ai_response = AnalysisResponse(
         request_id="test-id",
-        risk_level=RiskLevel.medium,
-        summary="Potential bleeding risk",
-        clinical_explanation="Warfarin and Ibuprofen may interact.",
+        headline="Warfarin and Ibuprofen combination carries significant bleeding risk.",
+        proceed="caution",
+        risk_level="medium",
+        summary="Warfarin and Ibuprofen may interact to increase bleeding risk. Monitor INR closely and consider alternatives.",
+        clinical_explanation="Ibuprofen inhibits platelet aggregation and may displace warfarin from protein binding sites, elevating anticoagulation effect.",
         dental_implications="Consider alternative analgesic.",
-        recommendations=["Monitor INR closely"],
-        alternative_medications=["Acetaminophen"],
-        confidence=ConfidenceLevel.medium,
-        sources=[SourceRef(name="rxnav", url="https://rxnav.nlm.nih.gov/")],
+        alternative_medications=[AlternativeMedication(name="Acetaminophen", dosage="500mg q6h", reason="Does not interact with warfarin anticoagulation")],
+        confidence="medium",
+        sources=[SourceAttribution(name="rxnav", url="https://rxnav.nlm.nih.gov/")],
         fallback=False,
         fallback_reason=None,
     )
@@ -251,7 +261,7 @@ async def test_e2e_analyze_returns_valid_response():
         patch("services.orchestrator.db.get_cached_analysis", new=AsyncMock(return_value=None)),
         patch("services.orchestrator.db.cache_analysis", new=AsyncMock(return_value=None)),
         patch("services.orchestrator.db.write_audit_log", new=AsyncMock(return_value=None)),
-        patch("services.orchestrator.rxnav.get_interactions", new=AsyncMock(return_value=mock_interactions)),
+        patch("services.orchestrator.interaction_db.get_interactions", new=AsyncMock(return_value=mock_interactions)),
         patch("services.orchestrator.openfda.get_warnings", new=AsyncMock(return_value=mock_warnings)),
         patch("services.orchestrator.pubmed.get_evidence", new=AsyncMock(return_value=[])),
         patch("services.orchestrator.openai_client.reason", new=AsyncMock(return_value=mock_ai_response)),
