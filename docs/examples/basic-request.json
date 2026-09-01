@@ -1,0 +1,21 @@
+{
+  "patient": {
+    "age": 68,
+    "sex": "male",
+    "conditions": ["atrial fibrillation", "heart failure"],
+    "allergies": ["penicillin"]
+  },
+  "current_medications": [
+    {"name": "Warfarin", "dosage": "5mg"},
+    {"name": "Carvedilol", "dosage": "25mg"},
+    {"name": "Furosemide", "dosage": "40mg"}
+  ],
+  "candidate_medication": {
+    "name": "Clarithromycin",
+    "dosage": "500mg"
+  },
+  "procedure": {
+    "type": "extraction",
+    "complexity": "routine"
+  }
+}
